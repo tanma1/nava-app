@@ -5,109 +5,66 @@
 <title>Nova – Couples App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase -->
+<!-- Firebase Compat SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0b0b14;
-  color: #fff;
-}
-header {
-  text-align: center;
-  padding: 20px;
-  background: #111;
-  font-size: 22px;
-}
-.hidden { display: none; }
+body { margin:0; font-family:Arial,sans-serif; background:#0b0b14; color:#fff; }
+header { text-align:center; padding:20px; background:#111; font-size:22px; }
+.hidden { display:none; }
 
-input, button {
-  width: 90%;
-  padding: 12px;
-  margin: 8px auto;
-  display: block;
-  border-radius: 8px;
-  border: none;
-}
-button {
-  background: #6f4cff;
-  color: white;
-  font-size: 16px;
-}
+input,button { width:90%; padding:12px; margin:8px auto; display:block; border-radius:8px; border:none; font-size:16px; }
+button { background:#6f4cff; color:white; cursor:pointer; transition:0.3s; }
+button:hover { background:#5833d1; }
 
-.tabbar {
-  display: flex;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: #111;
-}
-.tabbar button {
-  flex: 1;
-  background: none;
-  color: #aaa;
-}
-.tabbar button.active {
-  color: #6f4cff;
-}
+.tabbar { display:flex; position:fixed; bottom:0; width:100%; background:#111; }
+.tabbar button { flex:1; background:none; color:#aaa; font-size:16px; }
+.tabbar button.active { color:#6f4cff; }
 
-.section {
-  padding: 20px;
-  padding-bottom: 80px;
-}
+.section { padding:20px; padding-bottom:80px; }
+#tree { width:150px; height:200px; margin:30px auto; background:radial-gradient(circle at bottom,#3d8f55,#145c2f); border-radius:0 0 50% 50%; animation:sway 3s ease-in-out infinite; }
+@keyframes sway {0% {transform:rotate(-2deg);}50% {transform:rotate(2deg);}100% {transform:rotate(-2deg);}}
 
-/* Golden Tree */
-#tree {
-  width: 150px;
-  height: 200px;
-  margin: 30px auto;
-  background: radial-gradient(circle at bottom, #3d8f55, #145c2f);
-  border-radius: 0 0 50% 50%;
-  animation: sway 3s ease-in-out infinite;
-}
-@keyframes sway {
-  0% { transform: rotate(-2deg); }
-  50% { transform: rotate(2deg); }
-  100% { transform: rotate(-2deg); }
-}
-
-/* Chat */
-.chat-box {
-  max-height: 300px;
-  overflow-y: auto;
-}
-.msg {
-  margin: 6px;
-  padding: 10px;
-  border-radius: 10px;
-  max-width: 70%;
-}
-.me { background: #6f4cff; margin-left: auto; }
-.them { background: #333; }
-
-/* Drawing */
-canvas {
-  background: #fff;
-  border-radius: 10px;
-}
+#login { height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;
+ background: linear-gradient(-45deg,#0b0b14,#1c1c2e,#3d3d5c,#6f4cff);
+ background-size:400% 400%; animation: gradientBG 15s ease infinite; }
+@keyframes gradientBG {0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+.login-title { font-size:28px; margin-bottom:20px; text-align:center; animation:fadeIn 1.5s ease forwards; }
+.login-form input, .login-form button { width:250px; max-width:90%; padding:12px; margin:10px auto; display:block; border-radius:8px; border:none; font-size:16px; opacity:0; animation:fadeIn 2s ease forwards;}
+.login-form input:nth-child(1){animation-delay:0.5s;} 
+.login-form input:nth-child(2){animation-delay:0.8s;}
+.login-form button:nth-child(1){animation-delay:1.1s;} 
+.login-form button:nth-child(2){animation-delay:1.4s;}
+.login-form button:nth-child(3){animation-delay:1.7s; background:#db4437;} /* Google button */
+.login-form input#otp, #verifyOtpBtn, #recaptcha-container { display:block; margin-top:10px; width:250px; max-width:90%; padding:12px; border-radius:8px; border:none; font-size:16px; }
+#verifyOtpBtn { background:#28a745; color:white; cursor:pointer; }
+@keyframes fadeIn {0%{opacity:0; transform:translateY(-20px);} 100%{opacity:1; transform:translateY(0);}}
 </style>
 </head>
 
 <body>
-
 <header>🌳 Nova</header>
 
 <!-- LOGIN -->
 <div id="login" class="section">
-  <h3>Login / Signup</h3>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
-  <button onclick="signup()">Signup</button>
+  <h3 class="login-title">Welcome to Nova 🌳</h3>
+  <div class="login-form">
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <button onclick="signup()">Signup</button>
+    <button onclick="googleSignIn()">Sign in with Google</button>
+
+    <!-- Phone login -->
+    <input id="phoneNumber" placeholder="+91 9876543210">
+    <button onclick="phoneSignIn()">Sign in with Phone</button>
+    <input id="otp" placeholder="Enter OTP" class="hidden">
+    <button id="verifyOtpBtn" class="hidden" onclick="verifyOTP()">Verify OTP</button>
+    <div id="recaptcha-container"></div>
+  </div>
 </div>
 
 <!-- HOME -->
@@ -123,30 +80,16 @@ canvas {
   </div>
 </div>
 
-<!-- CHAT -->
-<div id="chat" class="section hidden">
-  <div id="chatLockedMsg">🔒 Chat will unlock after your partner accepts your request.</div>
-  <div class="chat-box hidden" id="messages"></div>
-  <input class="hidden" id="msgInput" placeholder="Type message">
-  <button class="hidden" onclick="sendMessage()">Send</button>
-</div>
-
-<!-- DRAW -->
-<div id="draw" class="section hidden">
-  <h3>Drawing for Partner</h3>
-  <p id="drawLockedMsg">🔒 Drawing unlocked after partner accepts.</p>
-  <canvas id="canvas" width="300" height="300" class="hidden"></canvas>
-</div>
-
 <!-- TABS -->
 <div class="tabbar hidden" id="tabs">
-  <button onclick="showTab('home')" class="active">Home</button>
-  <button onclick="showTab('chat')">Chat</button>
-  <button onclick="showTab('draw')">Draw</button>
+  <button onclick="showTab('home', this)" class="active">Home</button>
+  <button onclick="showTab('chat', this)">Chat</button>
+  <button onclick="showTab('draw', this)">Draw</button>
+  <button onclick="showTab('video', this)">Video Call</button>
 </div>
 
 <script>
-// 🔥 FIREBASE CONFIG (YOUR KEYS)
+// 🔹 Firebase Config (exact as given)
 const firebaseConfig = {
   apiKey: "AIzaSyDQT93RxuC4o88IT1pR6mfpLWZZYMuHbIo",
   authDomain: "novatani.firebaseapp.com",
@@ -157,153 +100,123 @@ const firebaseConfig = {
   measurementId: "G-LDBZZNVNG0"
 };
 
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
+const analytics = firebase.analytics();
 const auth = firebase.auth();
 const db = firebase.firestore();
-
 let currentPartner = null;
+let confirmationResult; // for phone login
 
-// AUTH
-function signup() {
-  auth.createUserWithEmailAndPassword(email.value, password.value).catch(alert);
-}
+window.onload = () => {
 
-function login() {
-  auth.signInWithEmailAndPassword(email.value, password.value).catch(alert);
-}
+  // AUTH STATE
+  auth.onAuthStateChanged(user => {
+    if(user){
+      login.classList.add("hidden");
+      home.classList.remove("hidden");
+      tabs.classList.remove("hidden");
+      loadPartnerRequests();
+      checkPartnerStatus();
+    }
+  });
 
-auth.onAuthStateChanged(user => {
-  if (user) {
-    login.classList.add("hidden");
-    home.classList.remove("hidden");
-    tabs.classList.remove("hidden");
-    loadPartnerRequests();
-    checkPartnerStatus();
+  // EMAIL / PASSWORD
+  window.signup = () => { auth.createUserWithEmailAndPassword(email.value,password.value).catch(alert); };
+  window.login = () => { auth.signInWithEmailAndPassword(email.value,password.value).catch(alert); };
+
+  // GOOGLE SIGN-IN
+  window.googleSignIn = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+    .then(result => {
+      const user = result.user;
+      alert("Signed in as: " + user.displayName);
+      db.collection("users").doc(user.uid).set({email:user.email,name:user.displayName},{merge:true});
+    })
+    .catch(error => { alert("Google Sign-In failed: " + error.message); });
+  };
+
+  // PHONE LOGIN
+  window.phoneSignIn = () => {
+    const phone = phoneNumber.value.trim();
+    if(!phone) return alert("Enter phone number");
+
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      'size': 'invisible'
+    });
+
+    auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
+      .then(result => {
+        confirmationResult = result;
+        alert("OTP sent!");
+        otp.classList.remove("hidden");
+        verifyOtpBtn.classList.remove("hidden");
+      }).catch(error => alert(error.message));
+  };
+
+  window.verifyOTP = () => {
+    const code = otp.value.trim();
+    if(!code) return alert("Enter OTP");
+    confirmationResult.confirm(code)
+      .then(result => {
+        const user = result.user;
+        alert("Phone login successful: " + user.phoneNumber);
+        db.collection("users").doc(user.uid).set({phone:user.phoneNumber},{merge:true});
+      })
+      .catch(error => alert(error.message));
+  };
+
+  // TAB SWITCHING
+  window.showTab = function(tab, btn){
+    home.classList.add("hidden"); chat.classList.add("hidden"); draw.classList.add("hidden"); video.classList.add("hidden");
+    document.getElementById(tab).classList.remove("hidden");
+    document.querySelectorAll(".tabbar button").forEach(b=>b.classList.remove("active"));
+    if(btn) btn.classList.add("active");
   }
-});
 
-// TABS
-function showTab(tab) {
-  home.classList.add("hidden");
-  chat.classList.add("hidden");
-  draw.classList.add("hidden");
-  document.getElementById(tab).classList.remove("hidden");
+  // PARTNER SYSTEM
+  window.sendPartnerRequest = () => {
+    const partnerEmailVal = partnerEmail.value.trim();
+    if(!partnerEmailVal) return alert("Enter partner email");
+    db.collection("partnerRequests").add({from:auth.currentUser.email,to:partnerEmailVal,status:"pending",timestamp:Date.now()})
+    .then(()=>alert("Request sent!"));
+  }
 
-  document.querySelectorAll(".tabbar button").forEach(b => b.classList.remove("active"));
-  event.target.classList.add("active");
-}
-
-// 🔹 PARTNER REQUEST SYSTEM
-function sendPartnerRequest() {
-  const partnerEmailVal = partnerEmail.value.trim();
-  if (!partnerEmailVal) return alert("Enter partner email");
-
-  db.collection("partnerRequests").add({
-    from: auth.currentUser.email,
-    to: partnerEmailVal,
-    status: "pending",
-    timestamp: Date.now()
-  }).then(() => alert("Request sent!"));
-}
-
-function loadPartnerRequests() {
-  db.collection("partnerRequests")
-    .where("to", "==", auth.currentUser.email)
-    .where("status", "==", "pending")
-    .onSnapshot(snapshot => {
-      incomingRequests.innerHTML = "";
-      snapshot.forEach(doc => {
-        const req = doc.data();
-        const div = document.createElement("div");
-        div.innerHTML = `
-          <p>${req.from} sent you a partner request</p>
-          <button onclick="acceptRequest('${doc.id}', '${req.from}')">Accept</button>
-          <button onclick="rejectRequest('${doc.id}')">Reject</button>
-        `;
+  window.loadPartnerRequests = () => {
+    db.collection("partnerRequests").where("to","==",auth.currentUser.email).where("status","==","pending")
+    .onSnapshot(snapshot=>{
+      incomingRequests.innerHTML="";
+      snapshot.forEach(doc=>{
+        const req=doc.data();
+        const div=document.createElement("div");
+        div.innerHTML=`<p>${req.from} sent you a partner request</p>
+        <button onclick="acceptRequest('${doc.id}','${req.from}')">Accept</button>
+        <button onclick="rejectRequest('${doc.id}')">Reject</button>`;
         incomingRequests.appendChild(div);
       });
     });
-}
+  }
 
-function acceptRequest(id, fromEmail) {
-  db.collection("partnerRequests").doc(id).update({status: "accepted"});
-  db.collection("users").doc(auth.currentUser.uid).set({partner: fromEmail});
-  db.collection("users").doc(fromEmail).set({partner: auth.currentUser.email}, {merge: true});
-  currentPartner = fromEmail;
-  checkPartnerStatus();
-}
+  window.acceptRequest = (id,fromEmail) => {
+    db.collection("partnerRequests").doc(id).update({status:"accepted"});
+    db.collection("users").doc(auth.currentUser.uid).set({partner:fromEmail});
+    db.collection("users").doc(fromEmail).set({partner:auth.currentUser.email},{merge:true});
+    currentPartner=fromEmail;
+    checkPartnerStatus();
+  }
 
-function rejectRequest(id) {
-  db.collection("partnerRequests").doc(id).update({status: "rejected"});
-  alert("Request rejected");
-}
+  window.rejectRequest = (id) => { db.collection("partnerRequests").doc(id).update({status:"rejected"}); alert("Request rejected"); }
 
-function checkPartnerStatus() {
-  db.collection("users").doc(auth.currentUser.uid).get().then(doc => {
-    if (doc.exists && doc.data().partner) {
-      currentPartner = doc.data().partner;
-      partnerStatus.innerText = "Partner linked: " + currentPartner;
-      unlockChatDraw();
-    } else {
-      partnerStatus.innerText = "No partner linked yet";
-    }
-  });
-}
-
-// 🔹 CHAT (only if partner accepted)
-function unlockChatDraw() {
-  chatLockedMsg.classList.add("hidden");
-  messages.classList.remove("hidden");
-  msgInput.classList.remove("hidden");
-  msgInput.previousElementSibling.classList.remove("hidden"); // button
-  drawLockedMsg.classList.add("hidden");
-  canvas.classList.remove("hidden");
-  loadMessages();
-}
-
-function sendMessage() {
-  if (!currentPartner) return alert("No partner linked");
-  db.collection("messages").add({
-    text: msgInput.value,
-    from: auth.currentUser.email,
-    to: currentPartner,
-    timestamp: Date.now()
-  });
-  msgInput.value = "";
-}
-
-function loadMessages() {
-  db.collection("messages")
-    .where("from", "in", [auth.currentUser.email, currentPartner])
-    .where("to", "in", [auth.currentUser.email, currentPartner])
-    .orderBy("timestamp")
-    .onSnapshot(snapshot => {
-      messages.innerHTML = "";
-      snapshot.forEach(doc => {
-        const m = doc.data();
-        const div = document.createElement("div");
-        div.className = "msg " + (m.from === auth.currentUser.email ? "me" : "them");
-        div.innerText = m.text;
-        messages.appendChild(div);
-      });
+  window.checkPartnerStatus = () => {
+    db.collection("users").doc(auth.currentUser.uid).get().then(doc=>{
+      if(doc.exists && doc.data().partner){
+        currentPartner=doc.data().partner;
+        partnerStatus.innerText="Partner linked: "+currentPartner;
+      } else partnerStatus.innerText="No partner linked yet";
     });
-}
-
-// DRAWING
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-let drawing = false;
-
-canvas.onmousedown = () => drawing = true;
-canvas.onmouseup = () => drawing = false;
-canvas.onmousemove = e => {
-  if (!drawing) return;
-  ctx.fillStyle = "#6f4cff";
-  ctx.beginPath();
-  ctx.arc(e.offsetX, e.offsetY, 3, 0, Math.PI*2);
-  ctx.fill();
+  }
 };
 </script>
-
 </body>
 </html>
