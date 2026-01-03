@@ -115,20 +115,27 @@ canvas {
   <h3>Your Golden Tree</h3>
   <div id="tree"></div>
   <p>Grow your bond 🌱</p>
+  <div id="partnerSection">
+    <input id="partnerEmail" placeholder="Enter partner email">
+    <button onclick="sendPartnerRequest()">Send Partner Request</button>
+    <div id="incomingRequests"></div>
+    <p id="partnerStatus"></p>
+  </div>
 </div>
 
 <!-- CHAT -->
 <div id="chat" class="section hidden">
-  <div class="chat-box" id="messages"></div>
-  <input id="msgInput" placeholder="Type message">
-  <button onclick="sendMessage()">Send</button>
+  <div id="chatLockedMsg">🔒 Chat will unlock after your partner accepts your request.</div>
+  <div class="chat-box hidden" id="messages"></div>
+  <input class="hidden" id="msgInput" placeholder="Type message">
+  <button class="hidden" onclick="sendMessage()">Send</button>
 </div>
 
 <!-- DRAW -->
 <div id="draw" class="section hidden">
   <h3>Drawing for Partner</h3>
-  <canvas id="canvas" width="300" height="300"></canvas>
-  <p>Only you & your partner can see this</p>
+  <p id="drawLockedMsg">🔒 Drawing unlocked after partner accepts.</p>
+  <canvas id="canvas" width="300" height="300" class="hidden"></canvas>
 </div>
 
 <!-- TABS -->
@@ -150,22 +157,19 @@ const firebaseConfig = {
   measurementId: "G-LDBZZNVNG0"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+let currentPartner = null;
+
 // AUTH
 function signup() {
-  auth.createUserWithEmailAndPassword(
-    email.value, password.value
-  ).catch(alert);
+  auth.createUserWithEmailAndPassword(email.value, password.value).catch(alert);
 }
 
 function login() {
-  auth.signInWithEmailAndPassword(
-    email.value, password.value
-  ).catch(alert);
+  auth.signInWithEmailAndPassword(email.value, password.value).catch(alert);
 }
 
 auth.onAuthStateChanged(user => {
@@ -173,7 +177,8 @@ auth.onAuthStateChanged(user => {
     login.classList.add("hidden");
     home.classList.remove("hidden");
     tabs.classList.remove("hidden");
-    loadMessages();
+    loadPartnerRequests();
+    checkPartnerStatus();
   }
 });
 
@@ -184,31 +189,100 @@ function showTab(tab) {
   draw.classList.add("hidden");
   document.getElementById(tab).classList.remove("hidden");
 
-  document.querySelectorAll(".tabbar button")
-    .forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tabbar button").forEach(b => b.classList.remove("active"));
   event.target.classList.add("active");
 }
 
-// CHAT
+// 🔹 PARTNER REQUEST SYSTEM
+function sendPartnerRequest() {
+  const partnerEmailVal = partnerEmail.value.trim();
+  if (!partnerEmailVal) return alert("Enter partner email");
+
+  db.collection("partnerRequests").add({
+    from: auth.currentUser.email,
+    to: partnerEmailVal,
+    status: "pending",
+    timestamp: Date.now()
+  }).then(() => alert("Request sent!"));
+}
+
+function loadPartnerRequests() {
+  db.collection("partnerRequests")
+    .where("to", "==", auth.currentUser.email)
+    .where("status", "==", "pending")
+    .onSnapshot(snapshot => {
+      incomingRequests.innerHTML = "";
+      snapshot.forEach(doc => {
+        const req = doc.data();
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <p>${req.from} sent you a partner request</p>
+          <button onclick="acceptRequest('${doc.id}', '${req.from}')">Accept</button>
+          <button onclick="rejectRequest('${doc.id}')">Reject</button>
+        `;
+        incomingRequests.appendChild(div);
+      });
+    });
+}
+
+function acceptRequest(id, fromEmail) {
+  db.collection("partnerRequests").doc(id).update({status: "accepted"});
+  db.collection("users").doc(auth.currentUser.uid).set({partner: fromEmail});
+  db.collection("users").doc(fromEmail).set({partner: auth.currentUser.email}, {merge: true});
+  currentPartner = fromEmail;
+  checkPartnerStatus();
+}
+
+function rejectRequest(id) {
+  db.collection("partnerRequests").doc(id).update({status: "rejected"});
+  alert("Request rejected");
+}
+
+function checkPartnerStatus() {
+  db.collection("users").doc(auth.currentUser.uid).get().then(doc => {
+    if (doc.exists && doc.data().partner) {
+      currentPartner = doc.data().partner;
+      partnerStatus.innerText = "Partner linked: " + currentPartner;
+      unlockChatDraw();
+    } else {
+      partnerStatus.innerText = "No partner linked yet";
+    }
+  });
+}
+
+// 🔹 CHAT (only if partner accepted)
+function unlockChatDraw() {
+  chatLockedMsg.classList.add("hidden");
+  messages.classList.remove("hidden");
+  msgInput.classList.remove("hidden");
+  msgInput.previousElementSibling.classList.remove("hidden"); // button
+  drawLockedMsg.classList.add("hidden");
+  canvas.classList.remove("hidden");
+  loadMessages();
+}
+
 function sendMessage() {
+  if (!currentPartner) return alert("No partner linked");
   db.collection("messages").add({
     text: msgInput.value,
-    uid: auth.currentUser.uid,
-    time: Date.now()
+    from: auth.currentUser.email,
+    to: currentPartner,
+    timestamp: Date.now()
   });
   msgInput.value = "";
 }
 
 function loadMessages() {
   db.collection("messages")
-    .orderBy("time")
-    .onSnapshot(snap => {
+    .where("from", "in", [auth.currentUser.email, currentPartner])
+    .where("to", "in", [auth.currentUser.email, currentPartner])
+    .orderBy("timestamp")
+    .onSnapshot(snapshot => {
       messages.innerHTML = "";
-      snap.forEach(doc => {
+      snapshot.forEach(doc => {
         const m = doc.data();
         const div = document.createElement("div");
-        div.className = "msg " + 
-          (m.uid === auth.currentUser.uid ? "me" : "them");
+        div.className = "msg " + (m.from === auth.currentUser.email ? "me" : "them");
         div.innerText = m.text;
         messages.appendChild(div);
       });
