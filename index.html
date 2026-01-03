@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nova – Couples App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0b0b14;
+  color: #fff;
+}
+header {
+  text-align: center;
+  padding: 20px;
+  background: #111;
+  font-size: 22px;
+}
+.hidden { display: none; }
+
+input, button {
+  width: 90%;
+  padding: 12px;
+  margin: 8px auto;
+  display: block;
+  border-radius: 8px;
+  border: none;
+}
+button {
+  background: #6f4cff;
+  color: white;
+  font-size: 16px;
+}
+
+.tabbar {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #111;
+}
+.tabbar button {
+  flex: 1;
+  background: none;
+  color: #aaa;
+}
+.tabbar button.active {
+  color: #6f4cff;
+}
+
+.section {
+  padding: 20px;
+  padding-bottom: 80px;
+}
+
+/* Golden Tree */
+#tree {
+  width: 150px;
+  height: 200px;
+  margin: 30px auto;
+  background: radial-gradient(circle at bottom, #3d8f55, #145c2f);
+  border-radius: 0 0 50% 50%;
+  animation: sway 3s ease-in-out infinite;
+}
+@keyframes sway {
+  0% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+  100% { transform: rotate(-2deg); }
+}
+
+/* Chat */
+.chat-box {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.msg {
+  margin: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  max-width: 70%;
+}
+.me { background: #6f4cff; margin-left: auto; }
+.them { background: #333; }
+
+/* Drawing */
+canvas {
+  background: #fff;
+  border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<header>🌳 Nova</header>
+
+<!-- LOGIN -->
+<div id="login" class="section">
+  <h3>Login / Signup</h3>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <button onclick="signup()">Signup</button>
+</div>
+
+<!-- HOME -->
+<div id="home" class="section hidden">
+  <h3>Your Golden Tree</h3>
+  <div id="tree"></div>
+  <p>Grow your bond 🌱</p>
+</div>
+
+<!-- CHAT -->
+<div id="chat" class="section hidden">
+  <div class="chat-box" id="messages"></div>
+  <input id="msgInput" placeholder="Type message">
+  <button onclick="sendMessage()">Send</button>
+</div>
+
+<!-- DRAW -->
+<div id="draw" class="section hidden">
+  <h3>Drawing for Partner</h3>
+  <canvas id="canvas" width="300" height="300"></canvas>
+  <p>Only you & your partner can see this</p>
+</div>
+
+<!-- TABS -->
+<div class="tabbar hidden" id="tabs">
+  <button onclick="showTab('home')" class="active">Home</button>
+  <button onclick="showTab('chat')">Chat</button>
+  <button onclick="showTab('draw')">Draw</button>
+</div>
+
+<script>
+// 🔥 FIREBASE CONFIG (YOUR KEYS)
+const firebaseConfig = {
+  apiKey: "AIzaSyDQT93RxuC4o88IT1pR6mfpLWZZYMuHbIo",
+  authDomain: "novatani.firebaseapp.com",
+  projectId: "novatani",
+  storageBucket: "novatani.firebasestorage.app",
+  messagingSenderId: "957413463360",
+  appId: "1:957413463360:web:e41413589ae6c5f15056a5",
+  measurementId: "G-LDBZZNVNG0"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// AUTH
+function signup() {
+  auth.createUserWithEmailAndPassword(
+    email.value, password.value
+  ).catch(alert);
+}
+
+function login() {
+  auth.signInWithEmailAndPassword(
+    email.value, password.value
+  ).catch(alert);
+}
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    login.classList.add("hidden");
+    home.classList.remove("hidden");
+    tabs.classList.remove("hidden");
+    loadMessages();
+  }
+});
+
+// TABS
+function showTab(tab) {
+  home.classList.add("hidden");
+  chat.classList.add("hidden");
+  draw.classList.add("hidden");
+  document.getElementById(tab).classList.remove("hidden");
+
+  document.querySelectorAll(".tabbar button")
+    .forEach(b => b.classList.remove("active"));
+  event.target.classList.add("active");
+}
+
+// CHAT
+function sendMessage() {
+  db.collection("messages").add({
+    text: msgInput.value,
+    uid: auth.currentUser.uid,
+    time: Date.now()
+  });
+  msgInput.value = "";
+}
+
+function loadMessages() {
+  db.collection("messages")
+    .orderBy("time")
+    .onSnapshot(snap => {
+      messages.innerHTML = "";
+      snap.forEach(doc => {
+        const m = doc.data();
+        const div = document.createElement("div");
+        div.className = "msg " + 
+          (m.uid === auth.currentUser.uid ? "me" : "them");
+        div.innerText = m.text;
+        messages.appendChild(div);
+      });
+    });
+}
+
+// DRAWING
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+let drawing = false;
+
+canvas.onmousedown = () => drawing = true;
+canvas.onmouseup = () => drawing = false;
+canvas.onmousemove = e => {
+  if (!drawing) return;
+  ctx.fillStyle = "#6f4cff";
+  ctx.beginPath();
+  ctx.arc(e.offsetX, e.offsetY, 3, 0, Math.PI*2);
+  ctx.fill();
+};
+</script>
+
+</body>
+</html>
